@@ -173,7 +173,7 @@ st.sidebar.markdown(
     <style>
     .ai-icon {
         position: fixed;
-        bottom: 20px;
+        bottom: 40px;
         right: 20px;
         font-size: 24px;
         cursor: pointer;
