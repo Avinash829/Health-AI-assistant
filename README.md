@@ -1,15 +1,26 @@
-# Health-AI-assistant
+# 🩺 Health AI Assistant
 
+An intelligent Streamlit app powered by Gemini AI that helps users understand their medical reports and ask health-related questions.
 
-A Streamlit app that analyzes health reports and provides insights using Gemini AI.
+🔗 [Live Demo](https://healthbot829.streamlit.app)  
 
-## Features
-- Upload a health report (PDF).
-- Generate a detailed analysis (Patient's or Doctor's Report).
-- Ask health-related questions to the AI.
+---
 
-## How to Use
-1. Upload your health report.
-2. Select the type of report you want to generate.
-3. Click "Analyze Report" to view the results.
-4. Use the AI icon to ask health-related questions.
+## 🚀 Features
+
+- 📄 **PDF Upload**: Upload any health report (PDF format).
+- 🧑‍⚕️ **Report Analysis**: Get insights in two modes:
+  - **Patient's Report** – easy-to-understand summary.
+  - **Doctor's Report** – technical breakdown with treatment suggestions.
+- 🤖 **AI Chatbot**: Ask health-related questions and receive intelligent responses.
+- 📥 **PDF Export**: Download the AI-generated report as a PDF.
+- 🔒 **Privacy First**: No data is stored. Everything runs locally via Streamlit.
+
+---
+
+## 🛠️ Tech Stack
+
+- **Frontend/UI**: Streamlit  
+- **AI Integration**: Gemini API (Gemini 2.0 Flash)  
+- **PDF Handling**: PyPDF2, FPDF  
+- **Environment Management**: Python-dotenv
