@@ -3,14 +3,13 @@ import PyPDF2
 import google.generativeai as genai
 from dotenv import load_dotenv
 import os
-from fpdf import FPDF  # For generating PDFs
+from fpdf import FPDF
 
 load_dotenv()
-
 api_key = os.getenv("GEMINI_API_KEY")
 if not api_key:
     st.error("Gemini API key not found. Please set the GEMINI_API_KEY environment variable.")
-    st.stop()  # Stop the app if the API key is missing
+    st.stop()
 
 genai.configure(api_key=api_key)
 
@@ -21,6 +20,16 @@ def extract_text_from_pdf(uploaded_file):
         text += page.extract_text()
     return text
 
+def generate_pdf(report_text, filename="health_report.pdf"):
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Arial", size=12)
+    report_text_encoded = report_text.encode("latin-1", errors="replace").decode("latin-1")
+    pdf.multi_cell(0, 10, report_text_encoded)
+    pdf.output(filename)
+    return filename
+
+# Report Analysis
 def analyze_health_report(text, report_type):
     if report_type == "Doctor's Report":
         prompt = f"""
@@ -34,7 +43,7 @@ def analyze_health_report(text, report_type):
         Health Report:
         {text}
         """
-    else:  # Patient's Report
+    else:
         prompt = f"""
         Analyze the following health checkup report from a patient's perspective and provide:
         1. Summary of the patient's condition
@@ -46,12 +55,12 @@ def analyze_health_report(text, report_type):
         {text}
         """
 
-    # Call Gemini AI API
-    model = genai.GenerativeModel("gemini-2.0-flash")
+    model = genai.GenerativeModel("gemini-2.0")
     response = model.generate_content(prompt)
-    return response.text
+    return response.text.strip()
 
-def handle_user_query(query):
+# AI Chat Query Handler
+def handle_user_query(query, doctor_mode=False):
     health_keywords = [
         "health", "drug", "medicine", "body", "symptom", "treatment", "cure", "precaution", 
         "disease", "condition", "pain", "illness", "diagnosis", "prescription", "pharmacy", 
@@ -66,55 +75,63 @@ def handle_user_query(query):
 
     query_lower = query.lower()
 
-    if any(keyword in query_lower for keyword in health_keywords):
+    if not any(keyword in query_lower for keyword in health_keywords):
+        return "This assistant specializes in health and medical information. Please ask a question related to your body, health, symptoms, or wellness 😊."
+
+    if doctor_mode:
         prompt = f"""
-        Provide a precise and concise response to the following health-related query:
-        {query}
+        You are an AI assistant for medical professionals. Answer the question with accurate, technical detail and use clinical terminology when appropriate.
+
+        Question: {query}
         """
-        model = genai.GenerativeModel("gemini-2.0-flash")
-        response = model.generate_content(prompt)
-        return response.text
     else:
-        return "Sorry, I can only provide information related to health, drugs, medicines, or body conditions."
+        prompt = f"""
+        You are a professional and friendly AI health assistant. Give helpful, clear, and safe responses for the general public.
 
-def generate_pdf(report_text, filename="health_report.pdf"):
-    pdf = FPDF()
-    pdf.add_page()
-    pdf.set_font("Arial", size=12)
-    
-    report_text_encoded = report_text.encode("latin-1", errors="replace").decode("latin-1")
-    
-    pdf.multi_cell(0, 10, report_text_encoded)
-    pdf.output(filename)
-    return filename
+        Guidelines:
+        - Keep answers understandable for a non-medical person.
+        - Be empathetic and suggest doctor visits if needed.
+        - Include practical advice when applicable.
 
-st.title("Health AI Assistant")
+        Examples:
+        Q: What causes frequent headaches?
+        A: Frequent headaches can result from stress, eye strain, poor posture, dehydration, or underlying medical conditions. If they persist or worsen, it's important to consult a neurologist.
+
+        Q: How to treat mild fever at home?
+        A: For a mild fever, rest, drink plenty of fluids, and take paracetamol if needed. If it lasts more than 2 days or gets very high, see a doctor.
+
+        Now answer this:
+        Q: {query}
+        """
+
+    try:
+        model = genai.GenerativeModel("gemini-2.0")
+        response = model.generate_content(prompt)
+        answer = response.text.strip()
+
+        if not answer or "I'm not sure" in answer or "Sorry" in answer:
+            return "I'm sorry, I couldn't generate a helpful response. Please rephrase your question or consult a healthcare professional."
+
+        return answer
+
+    except Exception as e:
+        return f"An error occurred while generating the response: {e}"
+
+# Streamlit UI
+st.set_page_config(page_title="Health AI Assistant", layout="wide")
+st.title("Health AI Assistant 🩺🤖")
 
 st.markdown(
     """
-    ## Welcome to Health AI Assistant! 🩺🤖
+    ## Welcome to Health AI Assistant!
 
-    **Health AI Assistant** is your personal health companion designed to help you understand and analyze your health checkup reports. 
-    Whether you're a patient looking for a summary of your health or a doctor seeking detailed insights, this app has got you covered.
-
-    ### How It Works:
-    1. **Upload Your Health Report**: Upload your health checkup report in PDF format.
-    2. **Choose Report Type**: Select between a **Patient's Report** (easy-to-understand summary) or a **Doctor's Report** (detailed technical analysis).
-    3. **Get Insights**: The app will analyze your report and provide actionable insights, including symptoms, treatment suggestions, and remedies.
-    4. **Ask Questions**: Use the AI chatbot to ask health-related questions and get precise answers.
-
-    ### Why Use This App?
-    - **Easy to Use**: No medical expertise required.
-    - **Accurate Analysis**: Powered by advanced AI for reliable insights.
-    - **Privacy First**: Your data is secure and never shared with third parties.
-
-    Ready to get started? Upload your health report below! ⬇️
+    Upload your health report, choose a report type, and get actionable AI-driven insights.
     """
 )
 
 uploaded_file = st.file_uploader("Upload your health checkup report (PDF):", type="pdf")
 
-if uploaded_file is not None:
+if uploaded_file:
     text = extract_text_from_pdf(uploaded_file)
     st.write("### Extracted Text from PDF:")
     st.write(text)
@@ -123,10 +140,10 @@ if uploaded_file is not None:
 
     if st.button("Analyze Report"):
         st.write(f"### {report_type} Results:")
-        with st.spinner("Analyzing..."):
+        with st.spinner("Analyzing your report..."):
             try:
                 analysis = analyze_health_report(text, report_type)
-                st.session_state.analysis = analysis  # Store the report in session state
+                st.session_state.analysis = analysis
                 st.write(analysis)
             except Exception as e:
                 st.error(f"An error occurred: {e}")
@@ -141,46 +158,18 @@ if uploaded_file is not None:
                 mime="application/pdf"
             )
 
-    if "analysis" in st.session_state:
         st.write("### Shareable Link:")
-        st.write("Copy the link below to share your report:")
-        shareable_link = f"https://yourapp.com/report/{hash(st.session_state.analysis)}"  # Simulated link
-        st.code(shareable_link)
-
-st.sidebar.markdown(
-    """
-    <style>
-    .ai-icon {
-        position: fixed;
-        bottom: 50px;
-        right: 20px;
-        font-size: 24px;
-        cursor: pointer;
-    }
-    </style>
-    <div class="ai-icon" onclick="toggleChat()">🤖</div>
-    <script>
-    function toggleChat() {
-        const sidebar = window.parent.document.querySelector("[data-testid='stSidebar']");
-        if (sidebar.style.transform === 'translateX(0px)') {
-            sidebar.style.transform = 'translateX(100%)';
-        } else {
-            sidebar.style.transform = 'translateX(0px)';
-        }
-    }
-    </script>
-    """,
-    unsafe_allow_html=True
-)
+        st.code(f"https://yourapp.com/report/{hash(st.session_state.analysis)}")
 
 with st.sidebar:
-    st.write("### Ask the AI")
-    user_query = st.text_input("Enter your query related to health:")
+    st.write("### 💬 Ask the AI Assistant")
+    doctor_mode = st.toggle("👨‍⚕️ Doctor Mode", value=False)
+    user_query = st.text_input("Enter your health-related question:")
 
     if user_query:
         with st.spinner("Generating response..."):
             try:
-                response = handle_user_query(user_query)
+                response = handle_user_query(user_query, doctor_mode)
                 st.write("### AI Response:")
                 st.write(response)
             except Exception as e:
