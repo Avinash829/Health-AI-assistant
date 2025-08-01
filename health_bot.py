@@ -5,10 +5,8 @@ from dotenv import load_dotenv
 import os
 from fpdf import FPDF  # For generating PDFs
 
-# Load environment variables
 load_dotenv()
 
-# Configure Gemini API
 api_key = os.getenv("GEMINI_API_KEY")
 if not api_key:
     st.error("Gemini API key not found. Please set the GEMINI_API_KEY environment variable.")
@@ -16,7 +14,6 @@ if not api_key:
 
 genai.configure(api_key=api_key)
 
-# Function to extract text from PDF
 def extract_text_from_pdf(uploaded_file):
     pdf_reader = PyPDF2.PdfReader(uploaded_file)
     text = ""
@@ -24,7 +21,6 @@ def extract_text_from_pdf(uploaded_file):
         text += page.extract_text()
     return text
 
-# Function to analyze health report using Gemini AI
 def analyze_health_report(text, report_type):
     if report_type == "Doctor's Report":
         prompt = f"""
@@ -55,9 +51,7 @@ def analyze_health_report(text, report_type):
     response = model.generate_content(prompt)
     return response.text
 
-# Function to handle user queries
 def handle_user_query(query):
-    # List of health-related keywords
     health_keywords = [
         "health", "drug", "medicine", "body", "symptom", "treatment", "cure", "precaution", 
         "disease", "condition", "pain", "illness", "diagnosis", "prescription", "pharmacy", 
@@ -70,12 +64,9 @@ def handle_user_query(query):
         "hormone", "thyroid", "pregnancy", "childbirth", "menopause", "elderly", "pediatric"
     ]
 
-    # Convert query to lowercase for case-insensitive matching
     query_lower = query.lower()
 
-    # Check if the query contains any health-related keywords
     if any(keyword in query_lower for keyword in health_keywords):
-        # If the query is health-related, generate a response
         prompt = f"""
         Provide a precise and concise response to the following health-related query:
         {query}
@@ -84,26 +75,21 @@ def handle_user_query(query):
         response = model.generate_content(prompt)
         return response.text
     else:
-        # If the query is unrelated, return a message
         return "Sorry, I can only provide information related to health, drugs, medicines, or body conditions."
 
-# Function to generate a PDF from the report
 def generate_pdf(report_text, filename="health_report.pdf"):
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font("Arial", size=12)
     
-    # Replace unsupported characters with a placeholder or remove them
     report_text_encoded = report_text.encode("latin-1", errors="replace").decode("latin-1")
     
     pdf.multi_cell(0, 10, report_text_encoded)
     pdf.output(filename)
     return filename
 
-# Streamlit app
 st.title("Health AI Assistant")
 
-# Welcome Note and Description
 st.markdown(
     """
     ## Welcome to Health AI Assistant! 🩺🤖
@@ -126,19 +112,15 @@ st.markdown(
     """
 )
 
-# Upload PDF file
 uploaded_file = st.file_uploader("Upload your health checkup report (PDF):", type="pdf")
 
 if uploaded_file is not None:
-    # Extract text from PDF
     text = extract_text_from_pdf(uploaded_file)
     st.write("### Extracted Text from PDF:")
     st.write(text)
 
-    # Select report type
     report_type = st.radio("Select the type of report you want to generate:", ("Patient's Report", "Doctor's Report"))
 
-    # Analyze health report
     if st.button("Analyze Report"):
         st.write(f"### {report_type} Results:")
         with st.spinner("Analyzing..."):
@@ -149,7 +131,6 @@ if uploaded_file is not None:
             except Exception as e:
                 st.error(f"An error occurred: {e}")
 
-    # Download Report as PDF
     if "analysis" in st.session_state:
         pdf_filename = generate_pdf(st.session_state.analysis)
         with open(pdf_filename, "rb") as file:
@@ -160,14 +141,12 @@ if uploaded_file is not None:
                 mime="application/pdf"
             )
 
-    # Shareable Link for Report
     if "analysis" in st.session_state:
         st.write("### Shareable Link:")
         st.write("Copy the link below to share your report:")
         shareable_link = f"https://yourapp.com/report/{hash(st.session_state.analysis)}"  # Simulated link
         st.code(shareable_link)
 
-# Add an AI icon at the bottom right to toggle the chat interface
 st.sidebar.markdown(
     """
     <style>
@@ -194,7 +173,6 @@ st.sidebar.markdown(
     unsafe_allow_html=True
 )
 
-# Add a query input box in the sidebar
 with st.sidebar:
     st.write("### Ask the AI")
     user_query = st.text_input("Enter your query related to health:")
