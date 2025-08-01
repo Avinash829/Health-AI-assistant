@@ -105,7 +105,7 @@ def handle_user_query(query, doctor_mode=False):
         """
 
     try:
-        model = genai.GenerativeModel("gemini-2.0")
+        model = genai.GenerativeModel("gemini-2.0-flash")
         response = model.generate_content(prompt)
         answer = response.text.strip()
 
