@@ -55,7 +55,7 @@ def analyze_health_report(text, report_type):
         {text}
         """
 
-    model = genai.GenerativeModel("gemini-2.0")
+    model = genai.GenerativeModel("gemini-2.0-flash")
     response = model.generate_content(prompt)
     return response.text.strip()
 
